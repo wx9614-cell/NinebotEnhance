@@ -542,6 +542,20 @@ private volatile long lastValidFrameTime = 0;
     }
     private void scheduleImage(String request, ImageReader source) {
         if (source != reader || !request.equals(ownerRequest)) return;
+        // 白屏检测：3秒没收到有效画面就自动重启
+final String checkReq = request;
+main.postDelayed(new Runnable() {
+    @Override public void run() {
+        if (!checkReq.equals(ownerRequest)) return;
+        long now = SystemClock.elapsedRealtime();
+        if (lastValidFrameTime > 0 && now - lastValidFrameTime > 3000) {
+            report("检测到画面异常，正在自动重启投屏");
+            stopDirect(checkReq);
+            return;
+        }
+        main.postDelayed(this, 1000);
+    }
+}, 3000);
         FramePacer.Ticket ticket = framePacer.schedule(SystemClock.elapsedRealtime());
         if (ticket == null) return; // Coalesce callbacks into one pending read; retain no acquired Image.
         Runnable read = () -> {
