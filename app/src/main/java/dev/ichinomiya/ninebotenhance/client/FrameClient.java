@@ -566,7 +566,6 @@ public final class FrameClient {
             if (image == null || source != reader || !request.equals(ownerRequest)) return;
             long now = SystemClock.elapsedRealtime();
             Image.Plane plane = image.getPlanes()[0];
-lastValidFrameTime = SystemClock.elapsedRealtime();
             int width=source.getWidth(),height=source.getHeight();
             int frameWidth=screenCapture?width:settings.width,frameHeight=screenCapture?height:settings.height;
             Bitmap bitmap;
