@@ -1,4 +1,4 @@
-package dev.ichinomiya.ninebotenhance.client;
+5package dev.ichinomiya.ninebotenhance.client;
 
 import dev.ichinomiya.ninebotenhance.core.HudPalette;
 
@@ -541,13 +541,6 @@ public final class FrameClient {
     }
     private void scheduleImage(String request, ImageReader source) {
         if (source != reader || !request.equals(ownerRequest)) return;
-            report("检测到画面异常，正在自动重启投屏");
-            stopDirect(checkReq);
-            return;
-        }
-        main.postDelayed(this, 1000);
-    }
-}, 3000);
         FramePacer.Ticket ticket = framePacer.schedule(SystemClock.elapsedRealtime());
         if (ticket == null) return; // Coalesce callbacks into one pending read; retain no acquired Image.
         Runnable read = () -> {
