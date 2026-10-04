@@ -128,6 +128,7 @@ public final class FrameClient {
     private volatile boolean casting;
     private volatile String castRequest;
     private volatile long lastPoll;
+private volatile long lastValidFrameTime = 0;
     private volatile DisplaySettings settings = DisplaySettings.defaults();
     private ImageReader reader;
     private final FramePacer framePacer = new FramePacer(); // Accessed only on the frame worker.
