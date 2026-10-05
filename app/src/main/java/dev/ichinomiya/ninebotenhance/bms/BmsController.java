@@ -94,7 +94,7 @@ public final class BmsController {
         try{BluetoothManager manager=context.getSystemService(BluetoothManager.class);return manager==null?null:manager.getAdapter();}
         catch(RuntimeException e){return null;}
     }
-    private static String name(BluetoothDevice device)
+    private static String name(BluetoothDevice device)｛
         try{return device.getName();}catch(RuntimeException e){return null;}
     }
     private static Set<String> serviceUuids(BluetoothGatt open){
