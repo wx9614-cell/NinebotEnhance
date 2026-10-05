@@ -157,7 +157,7 @@ public final class BmsController {
     private void publish(BmsState next){
         if(next.equals(state))return;
         state=next;if(!next.ready()||!next.data().known())log("state "+next.describe());
-        for(Consumer<BmsState> watcher:watchers)main.post(()->watcher.accept(next));
+        for(Consumer<BmsState> watcher:watchers)main.post(()->watcher.accept(next));｝
     private static String error(Throwable e){return e.getClass().getSimpleName();}
     // ---------------------------------------------------------------- writing (frames are cut into MTU-3 chunks, written with response)
     private byte[] pending;private int pendingOffset;
