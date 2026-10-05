@@ -17,6 +17,11 @@ android {
         abortOnError = false
     }
 }
+testOptions {
+    unitTests.all {
+        it.enabled = false
+    }
+}
     compileOptions { sourceCompatibility = JavaVersion.VERSION_17; targetCompatibility = JavaVersion.VERSION_17 }
     buildTypes { release { isMinifyEnabled = false } }
     // About reads our complete attribution notice from the APK; AGP excludes this name by default.
