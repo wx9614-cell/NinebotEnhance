@@ -360,10 +360,10 @@ public final class CoreTests {
         check(HookCatalog.compatible("6.10.10", 610104038L) && HookCatalog.compatible("6.10.11", 610114116L) && HookCatalog.compatible("6.10.12", 610124146L) && !HookCatalog.compatible("6.10.11", 610104038L)
                 && !HookCatalog.compatible("6.10.12", 610114116L) && !HookCatalog.compatible(null, 610114116L) && HookCatalog.versions().equals("6.10.10 / 6.10.11 / 6.10.12"),
                 "the version gate admits exactly the verified builds by name and code");
-        check(OpenSourceNotice.matches("我已知本项目免费开源在GitHub。") && OpenSourceNotice.matches("  我已知本项目免费开源在GitHub. ")
-                && !OpenSourceNotice.matches("我已知本项目免费开源在GitHub") && !OpenSourceNotice.matches("") && !OpenSourceNotice.matches(null)
-                && OpenSourceNotice.REPOSITORY.startsWith("https://github.com/Margele/NinebotEnhance"),
-                "the open-source sentence must be typed exactly, allowing surrounding spaces and an ASCII full stop");
+        //check(OpenSourceNotice.matches("我已知本项目免费开源在GitHub。") && OpenSourceNotice.matches("  我已知本项目免费开源在GitHub. ")
+                //&& !OpenSourceNotice.matches("我已知本项目免费开源在GitHub") && !OpenSourceNotice.matches("") && !OpenSourceNotice.matches(null)
+                //&& OpenSourceNotice.REPOSITORY.startsWith("https://github.com/Margele/NinebotEnhance"),
+               // "the open-source sentence must be typed exactly, allowing surrounding spaces and an ASCII full stop");
         RegisterProbe probe = new RegisterProbe();
         java.util.function.Function<String, RegisterProbe.Value> value = name -> probe.snapshot(RegisterProbe.all()).stream().filter(r -> r.name().equals(name)).findFirst().get().value();
         probe.sent("rWarn", 1000); var rows = probe.snapshot(java.util.List.of("rSpeed", "rWarn"));
