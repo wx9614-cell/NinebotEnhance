@@ -1047,6 +1047,8 @@ public final class FrameClient {
         float volts = boardVoltage ? bms.data().volts() : v == null || now - v.elapsedTime() > w.voltageLimitMs() ? Float.NaN : v.number();
         dev.ichinomiya.ninebotenhance.core.TireTelemetry.Snapshot t = tires.snapshot();
         return new dev.ichinomiya.ninebotenhance.notification.DrawPanel.Values(speed, watts, volts, bms.data().known() ? bms.data().soc() : -1,
+        tyre(t.front().pressure(), now, w), tyre(t.rear().pressure(), now, w),
+        bms.data().known() ? bms.data().diffMv() : -1);
                 tyre(t.front().pressure(), now, w), tyre(t.rear().pressure(), now, w));
     }
     private static float tyre(dev.ichinomiya.ninebotenhance.core.TireTelemetry.Value value, long now, WidgetSettings w) {
