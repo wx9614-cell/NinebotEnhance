@@ -59,6 +59,6 @@ mos|=(buffer[47+dyn]&0xff)!=0?2:0;
         int maxMv=u16(buffer,84+dyn), minMv=u16(buffer,82+dyn);
 return new BmsData("",mos,cells,u32(buffer,50+dyn)/1000000f,u32(buffer,54+dyn)/1000000f,volts,amps,
         Math.round(volts*amps),u16(buffer,42+dyn),temps,
-        maxMv,minMv,maxMv-minMv,u32(buffer,58+dyn)*0.001f,0,cell,now);
+        maxMv,minMv,(maxMv+minMv)/2,maxMv-minMv,u32(buffer,58+dyn)*0.001f,0,cell,now);
     }
 }
