@@ -1049,7 +1049,8 @@ public final class FrameClient {
         return new dev.ichinomiya.ninebotenhance.notification.DrawPanel.Values(speed, watts, volts, bms.data().known() ? bms.data().soc() : -1,
         tyre(t.front().pressure(), now, w), tyre(t.rear().pressure(), now, w),
         bms.data().known() ? bms.data().diffMv() : -1);
-    private static float tyre(dev.ichinomiya.ninebotenhance.core.TireTelemetry.Value value, long now, WidgetSettings w) {
+    }
+        private static float tyre(dev.ichinomiya.ninebotenhance.core.TireTelemetry.Value value, long now, WidgetSettings w) {
         return value == null || now - value.elapsedTime() > w.tyreLimitMs() ? Float.NaN : value.number();
     }
     /** The vehicle reads the drawn picture needs: the gauge's speed always, the rest as its fields ask. */
