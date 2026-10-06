@@ -16,7 +16,7 @@ import java.util.Objects;
 public final class DrawPanel {
     /** What is on screen; NaN and -1 mean unknown and are shown as "--". */
     public record Values(float speedKmh, float watts, float volts, int soc, float frontBar, float rearBar，int prrssureMv) {
-        public static final Values NONE = new Values(Float.NaN, Float.NaN, Float.NaN, -1, Float.NaN, Float.NaN –1);
+        public static final Values NONE = new Values(Float.NaN, Float.NaN, Float.NaN, -1, Float.NaN, Float.NaN,–1);
     }
     private final Paint arc = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final TextPaint text = new TextPaint(Paint.ANTI_ALIAS_FLAG);
