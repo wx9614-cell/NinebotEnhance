@@ -5,8 +5,8 @@ package dev.ichinomiya.ninebotenhance.core;
  * widget preferences next to the other card settings; the frame the module draws into comes from the cast configuration.
  */
 public record DrawSettings(int maxSpeed, int first, int second, int third) {
-    public static final int NONE = 0, VOLTAGE = 1, POWER = 2, SPEED = 3, TYRES = 4, BMS_SOC = 5;
-    public static final String[] FIELD_NAMES = {"无", "电压", "功率", "速度", "胎压", "BMS 电量"};
+    public static final int NONE = 0, VOLTAGE = 1, POWER = 2, SPEED = 3, TYRES = 4, BMS_SOC = 5,PRESSURE = 6;
+    public static final String[] FIELD_NAMES = {"无", "电压", "功率", "速度", "胎压", "BMS 电量","压差"};
     public static final int MIN_MAX_SPEED = 30, MAX_MAX_SPEED = 200, MAX_SPEED_STEP = 10, DEFAULT_MAX_SPEED = 80;
     public static final DrawSettings DEFAULT = new DrawSettings(DEFAULT_MAX_SPEED, VOLTAGE, POWER, NONE);
     public DrawSettings {
