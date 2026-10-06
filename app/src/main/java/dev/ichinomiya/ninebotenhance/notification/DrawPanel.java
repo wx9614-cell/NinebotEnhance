@@ -65,6 +65,6 @@ public final class DrawPanel {
     /** A stable stamp of what the picture shows, so unchanged frames are handed back to the encoder untouched. */
     public static int stamp(DrawSettings settings, Values v, boolean dark) {
         return Objects.hash(settings, dark, Math.round(v.speedKmh() * 10), Math.round(v.watts()), Math.round(v.volts() * 10), v.soc(),
-                Math.round(v.frontBar() * 10), Math.round(v.rearBar() * 10))，v.pressureMv());
+                Math.round(v.frontBar() * 10), Math.round(v.rearBar() * 10)),v.pressureMv());
     }
 }
