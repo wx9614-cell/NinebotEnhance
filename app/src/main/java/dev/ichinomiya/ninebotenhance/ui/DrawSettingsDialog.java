@@ -85,7 +85,7 @@ public final class DrawSettingsDialog {
         @Override protected void onDraw(Canvas canvas) {
             int save = canvas.save(); float scale = getWidth() / (float) frameWidth; canvas.scale(scale, scale);
             panel.draw(canvas, frameWidth, frameHeight, HudPalette.of(dark), background, settings,
-                    new DrawPanel.Values(settings.maxSpeed() * 0.6f, 850, 79.2f, 88, 2.4f, 2.6f));
+                    new DrawPanel.Values(settings.maxSpeed() * 0.6f, 850, 79.2f, 88, 2.4f, 2.6f,-1));
             canvas.restoreToCount(save);
         }
     }
