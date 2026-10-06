@@ -50,7 +50,6 @@ public final class DrawPanel {
             text.setFakeBoldText(false); text.setColor(p.label()); text.setTextSize(l.fieldLabelSize());
             canvas.drawText(DrawSettings.fieldName(fields[i]), x, l.fieldTop() + l.fieldValueSize() * 1.15f + l.fieldLabelSize() * 1.5f, text);
         }
-    }
     public static String value(int field, Values v) {
         switch (field) {
             case DrawSettings.VOLTAGE: return Float.isNaN(v.volts()) ? "--" : String.format(Locale.ROOT, "%.1f V", v.volts());
