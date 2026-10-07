@@ -54,7 +54,7 @@ public final class AntBmsProtocol extends BufferedBmsProtocol {
         else for(int i=0;i<sensors;i++)temps[i]=s16(buffer,6+2*cells+2*i);
         float volts=u16(buffer,10+dyn)*0.01f;
         float amps=s16(buffer,12+dyn)*0.1f;
-        int mos=(buffer[？18+dyn]&0xff)!=0?1:0;
+        int mos=(buffer[18+dyn]&0xff)!=0?1:0;
 mos|=(buffer[19+dyn]&0xff)!=0?2:0;
         int maxMv=u16(buffer,84+dyn), minMv=u16(buffer,82+dyn);
 return new BmsData("",mos,cells,u32(buffer,50+dyn)/1000000f,u32(buffer,54+dyn)/1000000f,volts,amps,
