@@ -14,7 +14,7 @@ public final class BmsBundle {
         b.putLong("at",d.at());b.putString("name",d.name());b.putInt("mos",d.mos());b.putInt("cells",d.cells());
         b.putFloat("capacity",d.capacityAh());b.putFloat("remaining",d.remainingAh());b.putFloat("volts",d.volts());b.putFloat("amps",d.amps());
         b.putInt("watts",d.watts());b.putInt("soc",d.soc());b.putIntArray("temps",d.temps());
-        b.putInt("max_cell",d.maxCellMv());b.putInt("min_cell",d.minCellMv());b.putInt("avg_cell",d.avgCellMv());b.putInt("diff",d.diffMv());
+        b.putInt("max_cell",d.maxCellMv());b.putInt("min_cell",d.minCellMv());b.putInt("avg_cell",d.avgCellMv());b.putInt("diffMv",d.diffMv());
         b.putFloat("cycle_ah",d.cycleAh());b.putInt("cycles",d.cycles());b.putIntArray("cells_mv",d.cellMv());
         return b;
     }
