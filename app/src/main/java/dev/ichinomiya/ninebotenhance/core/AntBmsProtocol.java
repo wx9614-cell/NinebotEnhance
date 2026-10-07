@@ -48,14 +48,14 @@ public final class AntBmsProtocol extends BufferedBmsProtocol {
         if(sensors>6||cells<1||cells>32)return null;
         int dyn=2*cells+2*sensors;
         if(112+dyn>size-4)return null;
-        int[] cell=new int[cells];for(int i=0;i<cells;i++)cell[i]=u16(buffer,6+2*i);
+        int[] cell=new int[cells];for(int i=0;i<cells;i++)cell[i]=u16(buffer,34+2*i);
         int[] temps=new int[sensors==0?1:sensors];
-        if(sensors==0)temps[0]=s16(buffer,6+dyn);
-        else for(int i=0;i<sensors;i++)temps[i]=s16(buffer,6+2*cells+2*i);
-        float volts=u16(buffer,10+dyn)*0.01f;
-        float amps=s16(buffer,12+dyn)*0.1f;
-        int mos=(buffer[18+dyn]&0xff)!=0?1:0;
-mos|=(buffer[19+dyn]&0xff)!=0?2:0;
+        if(sensors==0)temps[0]=s16(buffer,34+dyn);
+        else for(int i=0;i<sensors;i++)temps[i]=s16(buffer,34+2*cells+2*i);
+        float volts=u16(buffer,38+dyn)*0.01f;
+        float amps=s16(buffer,40+dyn)*0.1f;
+        int mos=(buffer[46+dyn]&0xff)!=0?1:0;
+mos|=(buffer[47+dyn]&0xff)!=0?2:0;
         int maxMv=u16(buffer,84+dyn), minMv=u16(buffer,82+dyn);
 return new BmsData("",mos,cells,u32(buffer,50+dyn)/1000000f,u32(buffer,54+dyn)/1000000f,volts,amps,
         Math.round(volts*amps),u16(buffer,42+dyn),temps,
