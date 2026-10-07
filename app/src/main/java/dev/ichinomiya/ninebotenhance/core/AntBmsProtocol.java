@@ -56,7 +56,11 @@ public final class AntBmsProtocol extends BufferedBmsProtocol {
         float amps=s16(buffer,40+dyn)*0.1f;
         int mos=(buffer[46+dyn]&0xff)!=0?1:0;
 mos|=(buffer[47+dyn]&0xff)!=0?2:0;
-        int maxMv=u16(buffer,84+dyn), minMv=u16(buffer,82+dyn);
+        int maxMv=cell[0], minMv=cell[0];
+for(int i=1;i<cells;i++){
+    if(cell[i]>maxMv)maxMv=cell[i];
+    if(cell[i]<minMv)minMv=cell[i];
+}
 return new BmsData("",mos,cells,u32(buffer,50+dyn)/1000000f,u32(buffer,54+dyn)/1000000f,volts,amps,
         Math.round(volts*amps),u16(buffer,42+dyn),temps,
         maxMv,minMv,(maxMv+minMv)/2,maxMv-minMv,u32(buffer,58+dyn)*0.001f,0,cell,now);
