@@ -59,6 +59,7 @@ public final class DrawPanel {
             case DrawSettings.TYRES: return (Float.isNaN(v.frontBar()) ? "--" : String.format(Locale.ROOT, "%.1f", v.frontBar())) + " / "
                     + (Float.isNaN(v.rearBar()) ? "--" : String.format(Locale.ROOT, "%.1f", v.rearBar())) + " bar";
             case DrawSettings.BMS_SOC: return v.soc() < 0 ? "--" : v.soc() + "%";
+            case DrawSettings.PRESSURE: return v.pressureMv() < 0 ? "--" : v.pressureMv() + " mV";
             default: return "";
         }
     }
