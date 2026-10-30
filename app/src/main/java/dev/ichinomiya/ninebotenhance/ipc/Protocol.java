@@ -8,6 +8,14 @@ public final class Protocol {
     public static final String MODULE = "dev.ichinomiya.ninebotenhance", TARGET = "cn.ninebot.ninebot";
     public static final String DESCRIPTOR = MODULE + ".VirtualDisplay.v6", ROOT_AUTHORITY = MODULE + ".root";
     public static final String REQUEST = "mirror_request", TAG = "NinebotEnhance";
+    /** Control-plane IPC from the independent cast APK; video still travels through the official encoder hooks. */
+    public static final String EXTERNAL_CAST_BEGIN = MODULE + ".EXTERNAL_CAST_BEGIN";
+    public static final String EXTERNAL_CAST_STOP = MODULE + ".EXTERNAL_CAST_STOP";
+    public static final String EXTERNAL_CAST_REQUEST = "external_cast_request";
+    public static final String EXTERNAL_CAST_SOURCE = "external_cast_source";
+    public static final String EXTERNAL_CAST_APP = "external_cast_app";
+    public static final String EXTERNAL_CAST_CONTRACT = "external_cast_contract_v1";
+    public static final String EXTERNAL_CAST_PACKAGE = "dev.ichinomiya.ninebotcast";
     public static final int READ = 1, REPORT = 2, STOP_DIRECT = 3, BEGIN = 4, SETTINGS = 5, LOG = 6;
     public static final int UI_BACK = 8, UI_INPUT = 9, UI_RESTART_APP = 10, APP_ICON = 11;
     public static final int UI_TEXT = 12, UI_TYPING_KEY = 13, UI_DELETE = 14;

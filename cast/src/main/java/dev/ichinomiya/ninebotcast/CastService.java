@@ -24,10 +24,19 @@ public final class CastService extends Service {
         try {
             int[] size=fitSize(num(in,"width",1280), num(in,"height",720));
             int w=size[0], h=size[1], fps=num(in,"fps",20), rate=num(in,"bitrate",2500000);
-            DisplaySettings settings=DisplaySettings.defaults().withFrame(w,h);
+            boolean virtualOverride=in.getBooleanExtra("virtual_override", false);
+            boolean keepPhoneDpi=in.getBooleanExtra("keep_phone_dpi", false);
+            int virtualWidth=num(in,"virtual_width",DisplaySettings.DEFAULT_VIRTUAL_WIDTH), virtualHeight=num(in,"virtual_height",DisplaySettings.DEFAULT_VIRTUAL_HEIGHT);
+            int dpi=num(in,"dpi",DisplaySettings.DEFAULT_DPI), bottomInset=num(in,"bottom_inset",0);
+            DisplaySettings settings;
+            try { settings = new DisplaySettings(w,h,virtualWidth,virtualHeight,dpi,DisplaySettings.DEFAULT_BACKGROUND_COLOR,keepPhoneDpi,DisplaySettings.DEFAULT_LIGHT_BACKGROUND_COLOR,virtualOverride,bottomInset); }
+            catch (IllegalArgumentException e) { settings = DisplaySettings.defaults().withFrame(w,h); LogStore.add("CAST 虚拟屏参数无效，回退默认布局：" + e.getMessage()); }
+            boolean drawOverlay=in.getBooleanExtra("draw_overlay", true), touchInput=in.getBooleanExtra("touch_input", true);
+            String drawName=in.getStringExtra("draw_name");
             String host=in.getStringExtra("host"); int port=num(in,"port",5004);
             if (host == null || host.trim().isEmpty()) throw new IllegalArgumentException("未填写 UDP 目标地址");
             LogStore.add("CAST 初始化 frame="+w+"x"+h+" virtual="+settings.virtualWidth+"x"+settings.virtualHeight+" dpi="+settings.dpi+" profile="+settings.label()+" fps="+fps+" bitrate="+rate+" target="+host+":"+port);
+            LogStore.add("CAST options draw="+drawOverlay+" touch="+touchInput+" name="+drawName);
             createNotification();
             MediaProjectionManager manager=getSystemService(MediaProjectionManager.class);
             projection=manager.getMediaProjection(in.getIntExtra("result",0),(Intent)in.getParcelableExtra("data"));

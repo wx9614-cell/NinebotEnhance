@@ -12,6 +12,8 @@ import android.provider.Settings;
 import android.view.WindowInsets;
 import android.widget.*;
 import dev.ichinomiya.ninebotenhance.ipc.Protocol;
+import dev.ichinomiya.ninebotenhance.client.FrameClient;
+import dev.ichinomiya.ninebotenhance.hook.OfficialCompatibility;
 import dev.ichinomiya.ninebotenhance.privilege.PrivilegeManager;
 import java.util.concurrent.TimeUnit;
 
@@ -45,6 +47,20 @@ public final class ModuleActivity extends Activity {
         title.setPadding(0, MirrorUi.dp(this, 6), 0, MirrorUi.dp(this, 6)); root.addView(title);
         TextView version = new TextView(this); version.setText("版本 " + Protocol.VERSION); version.setTextSize(14); version.setTextColor(theme.secondary);
         version.setPadding(0, 0, 0, gap); root.addView(version);
+        Switch officialMode = new Switch(this);
+        officialMode.setText("官方认证兼容模式"); officialMode.setTextSize(16); officialMode.setTextColor(theme.text);
+        officialMode.setChecked(OfficialCompatibility.enabled());
+        officialMode.setOnCheckedChangeListener((button, checked) -> {
+            if (!OfficialCompatibility.setEnabled(this, checked)) {
+                button.setChecked(!checked);
+                Toast.makeText(this, "无法保存兼容模式设置", Toast.LENGTH_SHORT).show();
+                return;
+            }
+            Toast.makeText(this, checked ? "已开启：九号进程不安装任何 Hook" : "已关闭：重启九号后才会安装 Hook", Toast.LENGTH_LONG).show();
+        });
+        root.addView(officialMode, new LinearLayout.LayoutParams(-1, -2));
+        TextView modeHint = new TextView(this); modeHint.setText("开启后模块仍可安装，但不会进入九号进程；修改后请强制退出并重新打开九号出行。"); modeHint.setTextSize(12); modeHint.setTextColor(theme.secondary);
+        modeHint.setPadding(0, 0, 0, gap); root.addView(modeHint);
         TextView heading = new TextView(this); heading.setText("权限检测"); heading.setTextSize(16); heading.setTextColor(theme.text);
         heading.setPadding(0, gap / 2, 0, gap / 2); root.addView(heading);
         LinearLayout list = new LinearLayout(this); list.setOrientation(LinearLayout.VERTICAL); root.addView(list, new LinearLayout.LayoutParams(-1, -2));
@@ -53,6 +69,10 @@ public final class ModuleActivity extends Activity {
         stop.setMinimumHeight(MirrorUi.dp(this, 52)); stop.setOnClickListener(v -> forceStop());
         LinearLayout.LayoutParams stopParams = new LinearLayout.LayoutParams(-1, -2); stopParams.topMargin = gap * 2;
         root.addView(stop, stopParams);
+        Button diagnose = new Button(this); diagnose.setText("读取九号进程诊断"); theme.button(diagnose, null); diagnose.setTextSize(14); diagnose.setMaxLines(1);
+        diagnose.setMinimumHeight(MirrorUi.dp(this, 52)); diagnose.setOnClickListener(v -> diagnoseNinebot());
+        LinearLayout.LayoutParams diagnoseParams = new LinearLayout.LayoutParams(-1, -2); diagnoseParams.topMargin = gap;
+        root.addView(diagnose, diagnoseParams);
         ScrollView scroll = new ScrollView(this); scroll.addView(root); scroll.setBackgroundColor(theme.surface);
         setContentView(scroll);
     }
@@ -99,6 +119,12 @@ public final class ModuleActivity extends Activity {
     private void refresh() { if (rows != null) rows.fill(true); }
     // ---------------------------------------------------------------- force stop
     /** Shizuku / Sui first, then su; without either the system's own page for Ninebot is the place to stop it. */
+    private void diagnoseNinebot() {
+        Toast.makeText(this, "正在读取九号进程日志，请先打开一次九号出行", Toast.LENGTH_SHORT).show();
+        FrameClient frames = new FrameClient(Protocol.TARGET);
+        frames.attach(getApplicationContext());
+        LogDialog.show(this, frames, stop);
+    }
     private void forceStop() {
         if (getPackageManager().getLaunchIntentForPackage(Protocol.TARGET) == null) { Toast.makeText(this, "未安装九号出行", Toast.LENGTH_SHORT).show(); return; }
         stop.setEnabled(false);

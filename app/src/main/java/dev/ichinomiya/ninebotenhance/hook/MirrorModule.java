@@ -5,11 +5,15 @@ import dev.ichinomiya.ninebotenhance.ipc.Protocol;
 import dev.ichinomiya.ninebotenhance.navi.NaviApps;
 import dev.ichinomiya.ninebotenhance.platform.ModuleResources;
 import dev.ichinomiya.ninebotenhance.ui.DirectCastController;
+import dev.ichinomiya.ninebotenhance.hook.OfficialCompatibility;
 
 import android.app.Application;
 import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
+import android.content.BroadcastReceiver;
+import android.os.Binder;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.os.Handler;
@@ -44,6 +48,7 @@ public final class MirrorModule extends XposedModule {
     private final Map<Object, Boolean> startedManagers = Collections.synchronizedMap(new WeakHashMap<>());
     private FrameClient frames;
     private DirectCastController direct;
+    private BroadcastReceiver externalCastReceiver;
     private String process;
     /** Set once Ninebot's Application is attached; the hooks and the vehicle page need nothing else. */
     private volatile boolean hostAttached;
@@ -82,10 +87,12 @@ public final class MirrorModule extends XposedModule {
     /** Ninebot runs helper processes (":pushcore" and others); only the main process shows the vehicle page and needs the module. */
     private boolean mainProcess() { return process == null || process.equals(Protocol.TARGET); }
     @Override public void onPackageLoaded(PackageLoadedParam param) {
+        if (OfficialCompatibility.enabled()) return;
         if (Protocol.TARGET.equals(param.getPackageName())) { if (mainProcess()) install(param.getDefaultClassLoader()); }
         else if (NaviApps.supported(param.getPackageName())) naviApps(param.getPackageName()).install(param.getDefaultClassLoader());
     }
     @Override public void onPackageReady(PackageReadyParam param) {
+        if (OfficialCompatibility.enabled()) return;
         if (NaviApps.supported(param.getPackageName())) { naviApps(param.getPackageName()).ready(param.getClassLoader()); return; }
         if (!Protocol.TARGET.equals(param.getPackageName()) || !mainProcess()) return;
         install(param.getClassLoader()); loaders.add(param.getClassLoader());
@@ -123,7 +130,11 @@ public final class MirrorModule extends XposedModule {
                         android.content.pm.PackageInfo info = context.getPackageManager().getPackageInfo(Protocol.TARGET, 0);
                         versionTested = HookCatalog.compatible(info.versionName, info.getLongVersionCode()); hostAttached = true;
                         frames.targetVersion(info.versionName, info.getLongVersionCode(), versionTested);
-                        if (chain.getThisObject() instanceof Application) direct.attach((Application)chain.getThisObject());
+                        if (chain.getThisObject() instanceof Application) {
+                            Application app = (Application) chain.getThisObject();
+                            direct.attach(app);
+                            registerExternalCastReceiver(app);
+                        }
                         frames.report("TARGET " + info.versionName + "/" + info.getLongVersionCode() + " tested=" + versionTested);
                         loaders.add(context.getClassLoader());
                         if (chain.getThisObject() != null) loaders.add(chain.getThisObject().getClass().getClassLoader());
@@ -184,6 +195,35 @@ public final class MirrorModule extends XposedModule {
                 return result;
             });
         } catch (Throwable e) { frames.report("ClassLoader observer unavailable; using bounded scans: " + e.getClass().getSimpleName()); }
+    }
+    private static int senderUid(BroadcastReceiver receiver) {
+        try {
+            Method method = BroadcastReceiver.class.getMethod("getSentFromUid");
+            Object value = method.invoke(receiver);
+            if (value instanceof Integer && (Integer) value >= 0) return (Integer) value;
+        } catch (Throwable ignored) { }
+        return Binder.getCallingUid();
+    }
+    private void registerExternalCastReceiver(Application app) {
+        if (externalCastReceiver != null) return;
+        externalCastReceiver = new BroadcastReceiver() {
+            @Override public void onReceive(Context context, Intent intent) {
+                if (intent == null || !Protocol.EXTERNAL_CAST_CONTRACT.equals(intent.getStringExtra(Protocol.EXTERNAL_CAST_CONTRACT))) return;
+                int senderUid = senderUid(this);
+                String[] packages = context.getPackageManager().getPackagesForUid(senderUid);
+                boolean allowed = false;
+                if (packages != null) for (String name : packages) if (Protocol.EXTERNAL_CAST_PACKAGE.equals(name)) { allowed = true; break; }
+                if (!allowed) { frames.report("EXTERNAL rejected sender uid=" + senderUid); return; }
+                String request = intent.getStringExtra(Protocol.EXTERNAL_CAST_REQUEST);
+                String selected = intent.getStringExtra(Protocol.EXTERNAL_CAST_APP);
+                if (Protocol.EXTERNAL_CAST_BEGIN.equals(intent.getAction())) direct.externalCast(context, request, selected);
+                else if (Protocol.EXTERNAL_CAST_STOP.equals(intent.getAction())) direct.externalStop(request);
+            }
+        };
+        IntentFilter filter = new IntentFilter();
+        filter.addAction(Protocol.EXTERNAL_CAST_BEGIN); filter.addAction(Protocol.EXTERNAL_CAST_STOP);
+        app.registerReceiver(externalCastReceiver, filter, Context.RECEIVER_EXPORTED);
+        frames.report("EXTERNAL control receiver ready contract=v1");
     }
     private void scheduleScan() {
         new Handler(Looper.getMainLooper()).post(this::scan);

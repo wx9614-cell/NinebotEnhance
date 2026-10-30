@@ -63,6 +63,22 @@ public final class DirectCastController implements Application.ActivityLifecycle
         frames.setInputDeniedListener(this::inputDenied);
     }
     public void attach(Application application) { if (applications.add(application)) application.registerActivityLifecycleCallbacks(this); }
+    /** Entry used by the independent APK control plane. It deliberately reuses the normal UI/session path. */
+    public void externalCast(Context context, String request, String selectedApp) {
+        if (!Protocol.validRequest(request)) return;
+        main.post(() -> {
+            Activity activity = foreground.get();
+            if (!compatible.getAsBoolean() || !usable(activity)) { frames.report("EXTERNAL cast rejected: Ninebot vehicle page is not visible"); return; }
+            if (selectedApp != null && !selectedApp.isEmpty()) frames.report("EXTERNAL selected app=" + selectedApp);
+            if (session.casting()) { frames.report("EXTERNAL cast already running"); return; }
+            autostartPrompt(activity);
+            checkPermission(activity, null, () -> startVehicle(activity));
+        });
+    }
+    public void externalStop(String request) {
+        if (!Protocol.validRequest(request)) return;
+        main.post(() -> { if (session.casting() || session.cast() == DirectSession.Cast.CHECKING_VEHICLE || session.cast() == DirectSession.Cast.WAITING_DISPLAY || session.cast() == DirectSession.Cast.STARTING) endCast(session.castRequest(), true, "独立投屏已停止"); });
+    }
     public void inflated(int id, View view) {
         if (!compatible.getAsBoolean() || view == null) return;
         try { injector.inflated(view.getResources().getResourceEntryName(id), view); }

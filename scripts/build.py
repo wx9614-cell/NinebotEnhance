@@ -140,6 +140,10 @@ def main():
                 assert 'L'+PACKAGE.replace('.','/')+'/'+required+';' in definitions,required
             assert not any(n.startswith(('Lio/github/libxposed/api/','Ldev/ninebot/mirror/')) for n in definitions)
             assert not any(n.endswith(('.jks','.keystore','password.txt')) for n in archive.namelist())
+        # The artifact is a runtime module only. It must never contain the Ninebot host APK.
+        xposed_scope = (ROOT/'app/src/main/resources/META-INF/xposed/scope.list').read_text(encoding='utf-8').split()
+        assert 'cn.ninebot.ninebot' in xposed_scope, 'Ninebot host package missing from module scope'
+        assert (ROOT/'app/src/main/resources/META-INF/xposed/java_init.list').read_text(encoding='utf-8').strip() == PACKAGE+'.hook.MirrorModule'
         sha=hashlib.sha256(apk.read_bytes()).hexdigest();(dist/'SHA256SUMS.txt').write_text(sha+'  '+apk.name+'\n',encoding='utf-8')
         (dist/'artifact-checks.json').write_text(json.dumps({'version':name,'version_code':int(code),'package':PACKAGE,'apk':apk.name,'apk_size':apk.stat().st_size,
             'sha256':sha,'signing_certificate_sha256':certificate,'dex_classes':len(definitions),'host_assertions':int(re.search(r'PASS: (\d+)',test_output).group(1)),
