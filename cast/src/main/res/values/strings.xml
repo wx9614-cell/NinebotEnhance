@@ -1,4 +1,4 @@
 <resources>
-    <string name="app_name">九号独立投屏</string>
-    <string name="service_channel">九号独立投屏</string>
+    <string name="app_name">独立屏幕发送器</string>
+    <string name="service_channel">独立屏幕采集</string>
 </resources>
