@@ -68,8 +68,9 @@ public final class TirePressureHooks {
         }
     }
     private void publish(Packet p){long now=SystemClock.elapsedRealtime(),wall=System.currentTimeMillis();
-        tires.update(p.vehicle,true,p.fields[0],p.fields[1],TireTelemetry.Source.BLUETOOTH,wall,now);
-        tires.update(p.vehicle,false,p.fields[2],p.fields[3],TireTelemetry.Source.BLUETOOTH,wall,now);
+        boolean updated=tires.update(p.vehicle,true,p.fields[0],p.fields[1],TireTelemetry.Source.BLUETOOTH,wall,now);
+        updated|=tires.update(p.vehicle,false,p.fields[2],p.fields[3],TireTelemetry.Source.BLUETOOTH,wall,now);
+        if(updated)changed.run();
     }
     private static boolean hasValues(Packet p){for(Float value:p.fields)if(value!=null)return true;return false;}
     private boolean server(Object parser,String vehicle,Object config)throws ReflectiveOperationException{

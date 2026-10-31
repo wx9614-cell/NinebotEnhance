@@ -295,6 +295,15 @@ public final class FrameClient {
     public EncodingDiagnostics encoding() { return encoding; }
     public TireTelemetry tireData() { return tires; }
     public BatteryTelemetry batteryData() { return battery; }
+    /** Push a newly decoded vehicle value into the visible HUD without waiting for the next poll tick. */
+    public void vehicleDataChanged() {
+        if (!active) return;
+        hud.acceptTires(tires.snapshot());
+        hud.acceptBattery(battery.snapshot());
+        hud.acceptRide(ride.snapshot());
+        View preview = inlinePreview.get();
+        if (preview != null) preview.postInvalidateOnAnimation();
+    }
     /** Both observers follow the same selected vehicle; a cast pins it until the session ends. */
     public void selectVehicle(String key) { tires.select(key); battery.select(key); metadataWorker.post(() -> loadDashboardLayout(key)); }
     /** Frame size and dashboard occlusions from the selected vehicle's cached cast configuration; the calibrated default until one is read. */

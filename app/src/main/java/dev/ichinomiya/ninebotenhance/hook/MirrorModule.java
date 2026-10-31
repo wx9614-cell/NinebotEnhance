@@ -109,8 +109,8 @@ public final class MirrorModule extends XposedModule {
         statistics = new StatisticsHooks(this, frames);
         feature = new FeatureHooks(this, frames);
         encoding = new EncodingHooks(this, frames);
-        tirePressure = new TirePressureHooks(this, frames, () -> hostAttached, this::updateSummary);
-        vehicle = new VehicleHooks(this, frames, () -> hostAttached, this::updateSummary);
+        tirePressure = new TirePressureHooks(this, frames, () -> hostAttached, this::vehicleDataChanged);
+        vehicle = new VehicleHooks(this, frames, () -> hostAttached, this::vehicleDataChanged);
         frames.setVehicleReader(vehicle::pulse, vehicle::stop, vehicle::summary);
         naviSender = new NaviSender(frames, vehicle::deviceClass, () -> hostAttached);
         frames.setNaviTest(naviSender::pulse, naviSender::stop);
@@ -292,6 +292,10 @@ public final class MirrorModule extends XposedModule {
             installMethod(method, capture, scoped);
         }
         updateSummary();
+    }
+    /** Forward decoded vehicle changes to the active phone/vehicle HUD immediately. */
+    private void vehicleDataChanged() {
+        if (frames != null) frames.vehicleDataChanged();
     }
     private void updateSummary() {
         String compatibility = frames.compatibility();

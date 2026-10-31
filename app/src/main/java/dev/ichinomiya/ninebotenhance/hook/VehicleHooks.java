@@ -181,7 +181,10 @@ public final class VehicleHooks {
         // Frames are logged at most every 30 s per tag, so a long ride cannot evict the rest of the log.
         Long previous=frameLogged.get(tag);
         if(previous==null||now-previous>=FRAME_LOG_INTERVAL_MS){frameLogged.put(tag,now);frames.report("VEHICLE frame "+tag+" length="+(data==null?-1:data.length)+" bytes="+hex(data)+" -> "+decoded+(updated?"":" (unchanged)"));}
-        if(updated&&hits.add(method)){frames.report("VEHICLE received DynamicDevice.onResponse "+tag);changed.run();}
+        if(updated){
+            if(hits.add(method))frames.report("VEHICLE received DynamicDevice.onResponse "+tag);
+            changed.run();
+        }
     }
     /** Called from the frame worker while a session is active; the intervals come from the vehicle card settings. */
     public void pulse(String vehicle,WidgetSettings current){
