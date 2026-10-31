@@ -25,6 +25,7 @@ public final class StatisticsHooks {
     private final XposedModule module;
     private final FrameClient frames;
     private final Set<Method> hooked=ConcurrentHashMap.newKeySet();
+    private final Set<Method> receiverReportSeen=ConcurrentHashMap.newKeySet();
     public StatisticsHooks(XposedModule module,FrameClient frames){this.module=module;this.frames=frames;}
     public static boolean interesting(String name){
         if(name.equals(BLE_SENDER)||name.equals(NB_BLE_SENDER)||name.equals(WIFI_SENDER)||name.equals(FRAME_SENDER)||name.equals(SEND_QUEUE)||name.equals(UDP_SESSION)||name.equals(BLE_WRITER))return true;
@@ -64,9 +65,16 @@ public final class StatisticsHooks {
                 Object result=chain.proceed();
                 if(stats!=null && !(result instanceof Boolean && !((Boolean)result))) {
                     long now=SystemClock.elapsedRealtime();
-                    if(kind==2&&packet!=null)stats.packet(now,source,packet.bytes,packet.frameKey,packet.marker);
-                    else if(kind==1&&size>0)stats.frameSubmitted(now,source,size);
-                    else if(kind==0&&size>0)stats.encoded(now,source,size);
+                    if(kind==2 && packet != null) {
+                        stats.packet(now,source,packet.bytes,packet.frameKey,packet.marker);
+                        frames.packetSubmissionObserved(packet.bytes);
+                    } else if(kind==1&&size>0) {
+                        stats.frameSubmitted(now,source,size);
+                        frames.frameSubmissionObserved(size);
+                    } else if(kind==0&&size>0) {
+                        stats.encoded(now,source,size);
+                        frames.encodedFrameObserved(size);
+                    }
                 }
                 return result;
             }); frames.report("STATS observer "+source); }
@@ -92,7 +100,11 @@ public final class StatisticsHooks {
                     }
                     if(stats!=null&&receiver) {
                         int[] fraction=(int[])chain.getArg(2),lost=(int[])chain.getArg(3);
-                        if(fraction!=null&&fraction.length>0)stats.receiverReport(fraction[0],lost!=null&&lost.length>0?lost[0]:-1);
+                        if (fraction != null && fraction.length > 0) {
+                            long cumulative = lost != null && lost.length > 0 ? lost[0] : -1;
+                            stats.receiverReport(fraction[0],cumulative);
+                            if(receiverReportSeen.add(method)) frames.report("DASH receiver-report observed lossFraction="+fraction[0]+" cumulativeLost="+cumulative);
+                        }
                     }
                 } catch(RuntimeException ignored) {}
                 return chain.proceed();

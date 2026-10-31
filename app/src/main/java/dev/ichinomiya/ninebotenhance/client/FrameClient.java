@@ -451,31 +451,41 @@ public final class FrameClient {
         editor.apply();
         widgets=settings;hud.setWidgets(settings);View preview=inlinePreview.get();if(preview!=null)preview.postInvalidateOnAnimation();
     }
-    /** A cast attempt opens its encoding diagnostics before the vehicle check, so the cruise start is captured. */
+    /** A cast attempt opens source-neutral diagnostics before the vehicle check, so the full session is captured. */
     public void beginCastObservations(String castRequest) {
         synchronized (observationLock) {
             if (castRequest.equals(observedRequest)) return;
             observedRequest = castRequest;
             streamStats = new StreamStats(SystemClock.elapsedRealtime());
             encoding.begin(castRequest, true, SystemClock.elapsedRealtime());
+            report("CAST STAGE request=" + castRequest + " elapsedMs=" + SystemClock.elapsedRealtime()
+                    + " phase=CHECKING_VEHICLE observer=official-session source-neutral=true");
         }
     }
     private void endCastObservations(String castRequest) {
         synchronized (observationLock) {
             if (!castRequest.equals(observedRequest)) return;
-            encoding.stop(castRequest, SystemClock.elapsedRealtime(), statistics());
-            if (streamStats != null) streamStats.stop(SystemClock.elapsedRealtime());
+            long now = SystemClock.elapsedRealtime();
+            encoding.stop(castRequest, now, statistics());
+            if (streamStats != null) {
+                streamStats.stop(now);
+                report("CAST OBSERVE end " + transportSummary(streamStats.snapshot(now)));
+            }
+            report("CAST OBSERVE cleanup request=" + castRequest + " encodingStopped=true transportStopped=true");
         }
     }
     /** Binds a cast to the running display: from now on the capture hooks get its frames and the dashboard senders run. */
     public boolean attachCast(String displayRequest, String castRequest) {
         synchronized (frameLock) {
-            if (!displayRequest.equals(ownerRequest) || !active) return false;
+            if (!displayRequest.equals(ownerRequest) || !active) {
+                report("CAST attach rejected display=" + displayRequest + " active=" + active + " owner=" + ownerRequest);
+                return false;
+            }
             this.castRequest = castRequest; casting = true;
         }
         // The vehicle being cast is pinned now, not when the display was started.
         tires.beginSession(); battery.beginSession();
-        report("CAST attached " + castRequest + " to display " + displayRequest);
+        report("CAST attached request=" + castRequest + " display=" + displayRequest + " source=official-session");
         View preview = inlinePreview.get(); if (preview != null) preview.postInvalidateOnAnimation();
         return true;
     }
@@ -484,9 +494,12 @@ public final class FrameClient {
         boolean owned;
         synchronized (frameLock) { owned = castRequest.equals(this.castRequest); if (owned) { casting = false; this.castRequest = null; } }
         endCastObservations(castRequest);
-        if (!owned) return;
+        if (!owned) {
+            report("CAST detach ignored request=" + castRequest + " owner=" + this.castRequest);
+            return;
+        }
         themeSender.accept("", null); naviTestStop.run();
-        report("CAST detached " + castRequest);
+        report("CAST detached request=" + castRequest + " displayRetained=" + active);
         View preview = inlinePreview.get(); if (preview != null) preview.postInvalidateOnAnimation();
     }
     public boolean casting() { return casting; }
@@ -539,6 +552,11 @@ public final class FrameClient {
                         state = "正在准备系统录屏授权";
                     }
                     Surface surface = null;
+                    report("CAST STAGE display-config request=" + request + " elapsedMs=" + SystemClock.elapsedRealtime()
+                            + " source=" + source.name() + " capture=" + (screenCapture ? "MediaProjection" : drawing ? "drawn" : "ImageReader")
+                            + " surface=" + (!drawing) + " size=" + width + "x" + height + " frame=" + settings.width + "x" + settings.height
+                            + " virtual=" + settings.virtualWidth + "x" + settings.virtualHeight + " dpi=" + (renderPlan == null ? settings.dpi : renderPlan.dpi())
+                            + " targetFps=" + FramePacer.TARGET_FPS);
                     if (!drawing) {
                         reader = ImageReader.newInstance(width, height, PixelFormat.RGBA_8888, 3);
                         packed = ByteBuffer.allocateDirect((screenCapture ? width * height : settings.width * settings.height) * 4);
@@ -558,6 +576,9 @@ public final class FrameClient {
                     Bundle status = bridge.call(Protocol.BEGIN, args);
                     if (completed.get() || !request.equals(ownerRequest)) { stopDirect(request); return; }
                     beginAccepted = request; acceptStatus(request, status);
+                    report("CAST STAGE service-begin-accepted request=" + request + " elapsedMs=" + SystemClock.elapsedRealtime()
+                            + " active=" + status.getBoolean("active") + " ready=" + status.getBoolean("ready")
+                            + " displayId=" + status.getInt("displayId", -1) + " backend=" + status.getString("backend", "unknown"));
                     hud.accept(request, status.getBundle("hud"), SystemClock.elapsedRealtime());
                     PendingIntent consent = Ipc.parcelable(status, Protocol.CAPTURE_CONSENT, PendingIntent.class);
                     main.post(() -> {
@@ -607,7 +628,7 @@ public final class FrameClient {
                 bitmap = Bitmap.createBitmap(frameWidth,frameHeight,Bitmap.Config.ARGB_8888); bitmap.copyPixelsFromBuffer(packed);
             }
             bitmap.setDensity(Bitmap.DENSITY_NONE);
-            if(lastImage==0)report("RGBA first frame "+frameWidth+"x"+frameHeight+" content="+width+"x"+height+" position=0,"+(frameHeight-height)+" source="+(screenCapture?"MediaProjection":"VirtualDisplay"));
+            if(lastImage==0)report("CAST STAGE capture-first-frame request="+request+" elapsedMs="+now+" frame="+frameWidth+"x"+frameHeight+" content="+width+"x"+height+" position=0,"+(frameHeight-height)+" source="+(screenCapture?"MediaProjection":"VirtualDisplay"));
             synchronized (frameLock) {
                 latest = bitmap;
                 pictureRevision++;
@@ -628,6 +649,30 @@ public final class FrameClient {
     public DisplaySettings displaySettings() { return settings; }
     public StreamStats.Snapshot statistics() { StreamStats value=streamStats;return value==null?null:value.snapshot(SystemClock.elapsedRealtime()); }
     public StreamStats transportStats() { return ready() && casting ? streamStats : null; }
+    /** Compact source-neutral transport summary; never identifies or infers the vehicle destination. */
+    private static String transportSummary(StreamStats.Snapshot s) {
+        if (s == null) return "transport=unobserved";
+        return "captured=" + s.captured() + " supplied=" + s.replaced()
+                + " encodedCallbacks=" + s.encoded() + " encodedBytes=" + s.encodedBytes()
+                + " frameSubmissions=" + s.submittedFrames() + " rtpPackets=" + s.packets()
+                + " rtpBytes=" + s.sentBytes() + " queueDrops=" + s.dropped()
+                + " encoder=" + (s.encoderSource().isEmpty() ? "unobserved" : s.encoderSource())
+                + " sender=" + (s.senderSource().isEmpty() ? "unobserved" : s.senderSource());
+    }
+    /** First-hit stage markers observe original official callbacks without affecting their arguments or results. */
+    public void encodedFrameObserved(int bytes) {
+        StreamStats value = streamStats;
+        if (bytes > 0 && value != null && value.snapshot(SystemClock.elapsedRealtime()).encoded() == 1)
+            report("CAST STAGE encoded-first bytes=" + bytes);
+    }
+    public void frameSubmissionObserved(int bytes) {
+        if (bytes > 0 && streamStats != null && streamStats.snapshot(SystemClock.elapsedRealtime()).submittedFrames() == 1)
+            report("CAST STAGE sender-frame-first bytes=" + bytes);
+    }
+    public void packetSubmissionObserved(int bytes) {
+        if (bytes > 0 && streamStats != null && streamStats.snapshot(SystemClock.elapsedRealtime()).packets() == 1)
+            report("CAST STAGE transport-packet-first bytes=" + bytes);
+    }
     public boolean previewRotated(String request) { return request.equals(ownerRequest) && previewRotated; }
     public void setPreviewRotated(String request, boolean value) { if (request.equals(ownerRequest)) previewRotated = value; }
     public void drawInline(String request, Canvas canvas, int width, int height, boolean rotated) {
@@ -778,7 +823,10 @@ public final class FrameClient {
                 + " displayId=" + status.getInt("displayId", -1) + " " + status.getString("state", "")
                 + " appRecovery=" + status.getInt(Protocol.APP_RECOVERY)
                 + " appLayout=" + status.getString(Protocol.APP_LAYOUT_POLICY, "unreported") + " backend=" + status.getString("backend", "unreported");
-        if (!observed.equals(brokerStatus)) { brokerStatus = observed; report("VD STATUS " + observed); }
+        if (!observed.equals(brokerStatus)) {
+            brokerStatus = observed;
+            report("CAST STAGE service-status elapsedMs=" + SystemClock.elapsedRealtime() + " request=" + request + " " + observed);
+        }
         if (request.equals(status.getString(Protocol.REQUEST))) {
             active = status.getBoolean("active"); displayReady = status.getBoolean("ready"); state = status.getString("state", "");
             appRecovery = status.getInt(Protocol.APP_RECOVERY); appRecoveryDetail = status.getString(Protocol.APP_RECOVERY_DETAIL, "");
@@ -911,15 +959,14 @@ public final class FrameClient {
     public boolean failedFor(String request) { return request.equals(ownerRequest) && !active && lastPoll != 0; }
     private boolean ready() { return active && displayReady && (debugMode.enabled() || latest != null || drawing) && pollAlive(); }
     public void stopDirect(String request) {
-        synchronized (observationLock) {
-            if (request != null && request.equals(observedRequest)) {
-                encoding.stop(request, SystemClock.elapsedRealtime(), statistics());
-                if (streamStats != null) streamStats.stop(SystemClock.elapsedRealtime());
-            }
-        }
+        if (request != null && request.equals(observedRequest)) endCastObservations(request);
         if (request == null) return;
         boolean owns = request.equals(ownerRequest);
-        if (owns) { ownerRequest = null; beginAccepted = null; active = displayReady = false; casting = false; castRequest = null; tires.endSession(); battery.endSession(); hud.reset(); vehicleStop.run(); naviTestStop.run(); themeSender.accept("", null); }
+        if (owns) {
+            report("CAST STAGE display-stop request=" + request + " elapsedMs=" + SystemClock.elapsedRealtime()
+                    + " active=" + active + " displayReady=" + displayReady + " casting=" + casting);
+            ownerRequest = null; beginAccepted = null; active = displayReady = false; casting = false; castRequest = null; tires.endSession(); battery.endSession(); hud.reset(); vehicleStop.run(); naviTestStop.run(); themeSender.accept("", null);
+        }
         pendingStops.add(request); bridge.ensure(); controlWorker.post(this::flushStops);
         worker.post(() -> { if (owns && ownerRequest == null) closeFrames(); });
     }

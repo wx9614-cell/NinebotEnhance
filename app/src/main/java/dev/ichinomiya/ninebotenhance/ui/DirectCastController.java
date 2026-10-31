@@ -124,7 +124,7 @@ public final class DirectCastController implements Application.ActivityLifecycle
         String request = UUID.randomUUID().toString().replace("-", "");
         if (!session.beginDisplay(request)) return;
         captureMissingSince = 0; previewRecreateUntil = 0; previewLandscape = false;
-        frames.report("DISPLAY begin " + (withPreview ? "from its button" : "for a cast") + " (" + frames.cachedSource().name() + ")");
+        frames.report("CAST STAGE display-begin request=" + request + " elapsedMs=" + SystemClock.elapsedRealtime() + " source=" + frames.cachedSource().name() + " mode=" + (withPreview ? "preview" : "vehicle-cast"));
         frames.startDirect(request, activity, error -> {
             if (!session.ownsDisplay(request)) return;
             if (error != null) { endDisplay(request, error); return; }
@@ -139,7 +139,7 @@ public final class DirectCastController implements Application.ActivityLifecycle
         if (frames.readyFor(request)) {
             if (!session.displayReady(request)) return;
             if (preview != null) preview.ready();
-            frames.report("DISPLAY ready: first RGBA frame");
+            frames.report("CAST STAGE display-ready request=" + request + " elapsedMs=" + SystemClock.elapsedRealtime() + " displayRequest=" + request + " capture=first-RGBA-frame");
             injector.refresh(); main.postDelayed(() -> monitorDisplay(request), 500);
             String cast = session.castRequest();
             if (cast != null && session.cast() == DirectSession.Cast.WAITING_DISPLAY) attach(cast);
@@ -215,6 +215,10 @@ public final class DirectCastController implements Application.ActivityLifecycle
         try { activity.setRequestedOrientation(original); } catch (RuntimeException e) { frames.report("DISPLAY preview orientation " + Ipc.error(e)); }
     }
     // ---------------------------------------------------------------- cast layer
+    private void castStage(String request, String detail) {
+        frames.report("CAST STAGE request=" + request + " elapsedMs=" + SystemClock.elapsedRealtime()
+                + " phase=" + session.phase() + " " + detail);
+    }
     /** The middle button: start a cast on the running display (starting one if needed), or stop the current cast. */
     public void clickCast(Activity activity, View anchor) {
         if (!compatible.getAsBoolean()) return;
@@ -232,7 +236,7 @@ public final class DirectCastController implements Application.ActivityLifecycle
         if (!session.beginCast(request)) return;
         frames.beginCastObservations(request);
         origin = new WeakReference<>(activity); inlineDeadline = 0;
-        frames.report("DIRECT checking vehicle before the cast" + (session.displayRunning() ? "; virtual display already running" : ""));
+        castStage(request, "vehicle-check begin" + (session.displayRunning() ? " virtual-display=already-running" : " virtual-display=not-started"));
         try {
             // Ninebot's own listener does every vehicle check (connection, capability, power). It stays bound while ivCruise
             // is hidden, and callOnClick does not care about visibility, so the only thing that cannot be clicked is no view at all.
@@ -246,7 +250,7 @@ public final class DirectCastController implements Application.ActivityLifecycle
     public void vehiclePowerObserved(String request, boolean on) {
         main.post(() -> {
             if (!session.powerChecked(request, on)) return;
-            frames.report("DIRECT vehicle power checked on=" + on);
+            castStage(request, "vehicle-power observed on=" + on);
             if (!on) endCast(request, true, "车辆未开机，请先开机并连接蓝牙后再投屏");
         });
     }
@@ -256,8 +260,8 @@ public final class DirectCastController implements Application.ActivityLifecycle
         if (!usable(origin.get()) && !usable(cruise)) { endCast(request, false, "车辆页面已关闭"); return; }
         if (SystemClock.elapsedRealtime() >= deadline) { endCast(request, true, "未确认车辆投屏条件，请确认车辆已开机并连接蓝牙后重试"); return; }
         if (usable(cruise) && foreground.get() == cruise && cruise.hasWindowFocus()) {
-            session.cruiseReady(request);
-            if (session.vehicleConfirmed(request)) { prepareCast(request); return; }
+            if (session.cruiseReady(request)) castStage(request, "cruise-activity foreground-and-focused");
+            if (session.vehicleConfirmed(request)) { castStage(request, "vehicle-prerequisites confirmed"); prepareCast(request); return; }
         }
         main.postDelayed(() -> waitVehicle(request, deadline), 200);
     }
@@ -276,6 +280,7 @@ public final class DirectCastController implements Application.ActivityLifecycle
         String display = session.displayRequest();
         if (display == null || !session.launch(request)) return;
         beforeFrames = frames.replacementCount();
+        castStage(request, "attach displayRequest=" + display + " replacementFramesBefore=" + beforeFrames);
         if (!frames.attachCast(display, request)) { endCast(request, true, "虚拟显示器未就绪，请重试"); return; }
         launchDeadline = SystemClock.elapsedRealtime() + 90000;
         frames.report("DIRECT cast attached to the display; waiting for replacement frames");
@@ -287,7 +292,7 @@ public final class DirectCastController implements Application.ActivityLifecycle
         long now = SystemClock.elapsedRealtime();
         if (session.cast() == DirectSession.Cast.STARTING) {
             if ((frames.screenCapture() || cruiseActivity.get() != null) && frames.replacementCount() > beforeFrames) {
-                session.running(request); frames.report("DIRECT RUNNING replacement frames reached capture hooks"); injector.refresh();
+                if (session.running(request)) castStage(request, "capture-hook frame observed replacementFrames=" + frames.replacementCount()); injector.refresh();
             } else if (now > launchDeadline) { endCast(request, true, "巡航投屏未启动，请长按按钮查看日志"); return; }
         }
         Activity cruise = cruiseActivity.get();
@@ -312,6 +317,8 @@ public final class DirectCastController implements Application.ActivityLifecycle
     }
     private void endCast(String request, boolean finishCruise, String message) { endCast(request, finishCruise, message, false); }
     private void endCast(String request, boolean finishCruise, String message, boolean withDisplay) {
+        if (!session.ownsCast(request)) return;
+        castStage(request, "stopping reason=" + message);
         if (!session.endCast(request)) return;
         closePanel();
         Activity owned = cruiseActivity.get(); cruiseActivity.clear(); origin.clear();

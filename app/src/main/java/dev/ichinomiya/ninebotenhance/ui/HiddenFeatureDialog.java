@@ -53,6 +53,10 @@ public final class HiddenFeatureDialog {
         content.addView(options, rowParams(activity));
         AlertDialog dialog = dialog(activity, theme, "锁屏设置", content);
         options.setOnClickListener(v -> {
+            if (!frames.virtualDisplayAvailable()) {
+                Toast.makeText(activity, "锁屏设置仅在虚拟屏已连接并正常运行时可用；当前虚拟屏已断开或当前不是虚拟屏，无法启用。", Toast.LENGTH_LONG).show();
+                return;
+            }
             dialog.dismiss();
             showLockOptions(activity, frames, reference);
         });
@@ -78,6 +82,10 @@ public final class HiddenFeatureDialog {
             dialog.getButton(AlertDialog.BUTTON_POSITIVE).setTextColor(theme.accent);
             dialog.getButton(AlertDialog.BUTTON_NEGATIVE).setTextColor(theme.accent);
             dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v -> {
+                if (!frames.virtualDisplayAvailable()) {
+                    Toast.makeText(activity, "虚拟屏已断开或当前不是虚拟屏，锁屏设置未启用。请先重新连接并保持虚拟屏运行。", Toast.LENGTH_LONG).show();
+                    return;
+                }
                 frames.saveLockScreenSettings(new LockScreenSettings(time.isChecked(), refresh.isChecked(), true,
                         date.isChecked(), temperature.isChecked(), temperatureUnit.isChecked()));
                 if (!frames.cachedSource().virtual()) {
